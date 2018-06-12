@@ -34,7 +34,11 @@ namespace gr
 	lms_stream_t streamId[2];
 	uint32_t fifosize =  4096*10;
 
-
+	//Variables for the tag passing.
+	lms_stream_meta_t meta_data;
+	uint64_t prevTime=0;
+	pmt::pmt_t key,srcid,pmt_value;
+	
 
 	int LMS_CH_0 = 0;
 	int LMS_CH_1 = 1;
