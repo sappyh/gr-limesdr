@@ -202,6 +202,10 @@ namespace gr
 		device_handler::getInstance().calibrate(stored.device_number,stored.device_type,calibration_ch1,LMS_CH_RX,LMS_CH_1,calibr_bandw_ch1,rf_freq,lna_path_ch1);
 	    }
 	}
+	//Initialize the pmt values
+	key = pmt::string_to_symbol("meta");
+	srcid = pmt::string_to_symbol("source");
+
 	std::cout << "---------------------------------------------------------------" <<  std::endl;
     }
 
@@ -260,10 +264,23 @@ namespace gr
 	// Receive stream for channel 0 (if chip_mode is SISO)
 	if(stored.chip_mode == 1)
 	{
-	    int ret = LMS_RecvStream(&streamId[stored.channel],
+		//Add timetag support for SISO
+
+		
+	    
+		int ret = LMS_RecvStream(&streamId[stored.channel],
 				    output_items[0],
 				    noutput_items,
-				    NULL, 0);
+				    &meta_data, 0);
+
+		//Check for new timestamp
+		if(meta_data.timestamp != prevTime)
+		{
+			pmt_value = pmt::string_to_symbol(std::to_string(meta_data.timestamp));
+			add_item_tag(0, nitems_written(0), key, pmt_value, srcid);
+			prevTime=meta_data.timestamp;
+			// std::cout<<" The timestamp received is "<<meta_data.timestamp<<std::endl;
+		}
 
 	    if (ret < 0)
 		return 0; //call again
@@ -298,7 +315,7 @@ namespace gr
     {
 	this->streamId[channel].channel = channel;
 	this->streamId[channel].fifoSize = fifosize;
-	this->streamId[channel].throughputVsLatency = 0.5;
+	this->streamId[channel].throughputVsLatency = 0;
 	this->streamId[channel].isTx = LMS_CH_RX;
 	this->streamId[channel].dataFmt = lms_stream_t::LMS_FMT_F32;
 
