@@ -274,7 +274,7 @@ int sink_impl::work(int noutput_items,
 		int ret = LMS_SendStream(&streamId[stored.channel],
 								 input_items[0],
 								 noutput_items,
-								 NULL, 0);
+								 &meta_data, 0);
 		if (ret < 0)
 		{
 			return 0; //call again
