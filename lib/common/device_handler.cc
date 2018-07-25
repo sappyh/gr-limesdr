@@ -741,3 +741,37 @@ void device_handler::set_gain(int device_number, bool direction, int channel, un
         exit(0);
     }
 }
+
+void device_handler::enable_rssi(int device_number, uint8_t avg_window)
+{
+    // 0x040C[6] = 0, don't bypass AGC module --Set by default.
+
+    // 0x040A[13:12] = 1, set AGC mode to RSSI
+    LMS_WriteParam(device_handler::getInstance().get_device(device_number), LMS7_RSSI_MODE, 1);
+
+    // 0x0400[14:13] = 0, select RSSI value to be captured into 0x040E, 0x040F registers --done by default.
+
+
+    // 0x040A[2:0] = any value from 0 to 7 (from 2^7 to 2^14 samples), set how many samples used to calculate RSSI
+    LMS_WriteParam(device_handler::getInstance().get_device(device_number),LMS7_AGC_AVG_RXTSP, 0);
+
+
+    
+}
+
+uint32_t device_handler::read_rssi(int device_number)
+{
+    //trigger positive edge on the capture signal
+    LMS_WriteParam(device_handler::getInstance().get_device(device_number),LMS7_CAPTURE,0);
+    LMS_WriteParam(device_handler::getInstance().get_device(device_number),LMS7_CAPTURE,1);
+    //read the LMS7002M register
+
+    uint16_t rssi_value_lsb, rssi_value_msb;
+    LMS_ReadLMSReg(device_handler::getInstance().get_device(device_number),0x040E,&rssi_value_lsb);
+    LMS_ReadLMSReg(device_handler::getInstance().get_device(device_number),0x040F,&rssi_value_msb);
+    return  (rssi_value_msb << 2) | (rssi_value_lsb & 0x3); 
+
+
+
+
+}

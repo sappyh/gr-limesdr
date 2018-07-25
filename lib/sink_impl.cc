@@ -196,16 +196,33 @@ sink_impl::sink_impl(int device_number,
 		}
 	}
 
-	LMS_WriteFPGAReg(device_handler::getInstance().get_device(stored.device_number), 0x0017, 0x0055);
-	uint16_t reg;
-	LMS_ReadFPGAReg(device_handler::getInstance().get_device(stored.device_number), 0x0017, &reg);
-	std::cout << "The value of reg is :" << reg << std::endl;
+	// LMS_WriteFPGAReg(device_handler::getInstance().get_device(stored.device_number), 0x0017, 0x0055);
+	// // const unsigned address = 0x002A;
+    // // const unsigned mask1=0xFFFC;
+    // // const unsigned mask2=0x0406;
+	// uint16_t reg;
+	// LMS_ReadFPGAReg(device_handler::getInstance().get_device(stored.device_number), 0x0017, &reg);
+	// // reg=reg & mask1;
+	// reg=reg | mask2;
+	// LMS_WriteLMSReg(device_handler::getInstance().get_device(stored.device_number), 0x002A, reg);
+
+	//My stuff
+	// std::cout << "The value of reg is :" << reg << std::endl;
 	std::cout << "---------------------------------------------------------------" << std::endl;
+
+
+	time_key = pmt::string_to_symbol("timestamp");
+	sob_key = pmt::string_to_symbol("tx_sob");
+	eob_key = pmt::string_to_symbol("tx_eob");
+
+
+	fp1.open("/tmp/t2.txt");
 }
 
 sink_impl::~sink_impl()
 {
 	device_handler::getInstance().close_device(stored.device_number);
+	fp1.close();
 }
 
 bool sink_impl::start(void)
@@ -262,15 +279,43 @@ int sink_impl::work(int noutput_items,
 		meta_data.waitForTimestamp = false;
 
 		std::vector<gr::tag_t> tags;
-		static const pmt::pmt_t eob_key = pmt::string_to_symbol("tx_eob");
 		get_tags_in_window(tags, 0, 0, noutput_items, eob_key);
 		if (!tags.empty())
 		{
 			// std::cout<< "Found EOB" <<std::endl;
 			meta_data.flushPartialPacket = true;
+			stream = false;
+			// flags |= SOAPY_SDR_END_BURST;
+		}
+
+		tags.clear();
+
+		get_tags_in_window(tags, 0, 0, noutput_items, time_key);
+		if (!tags.empty())
+		{
+			// std::cout<< "Found timestamp: "<<pmt::to_uint64(tags[0].value)  <<std::endl;
+			meta_data.waitForTimestamp = true;
+			meta_data.timestamp = pmt::to_uint64(tags[0].value);
+			// flags |= SOAPY_SDR_END_BURST;
+		}
+
+		tags.clear();
+
+		get_tags_in_window(tags, 0, 0, noutput_items, sob_key);
+		if (!tags.empty())
+		{
+			// std::cout << "Found SOB" << std::endl;
+			stream = true;
 			// flags |= SOAPY_SDR_END_BURST;
 		}
 		// std::cout << meta_data.flushPartialPacket << std::endl;
+
+		// if(stream)
+		// {
+		//Get the wall clock time of my stream.
+		clock_gettime(CLOCK_REALTIME,&tnow);
+		fp1<<tnow.tv_sec*1000000+tnow.tv_nsec/1000L<<std::endl;
+
 		int ret = LMS_SendStream(&streamId[stored.channel],
 								 input_items[0],
 								 noutput_items,
@@ -280,6 +325,9 @@ int sink_impl::work(int noutput_items,
 			return 0; //call again
 		}
 		consume(0, ret);
+		// }
+		// else
+		// return 0;
 	}
 	// Send stream for channels 0 & 1 (if chip_mode is MIMO)
 	else if (stored.chip_mode == 2)
@@ -306,7 +354,7 @@ void sink_impl::init_stream(int device_number, int channel)
 {
 	streamId[channel].channel = channel;
 	streamId[channel].fifoSize = fifosize;
-	streamId[channel].throughputVsLatency = 0.5;
+	streamId[channel].throughputVsLatency = 0;
 	streamId[channel].isTx = LMS_CH_TX;
 	streamId[channel].dataFmt = lms_stream_t::LMS_FMT_F32;
 

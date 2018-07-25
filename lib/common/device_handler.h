@@ -311,6 +311,9 @@ public:
 	* @param   gain_dB        Desired gain: [0,70] RX, [0,60] TX.
 	*/
 	void set_gain(int device_number, bool direction, int channel, unsigned int gain_dB);
+
+	void enable_rssi(int device_number, uint8_t avg_window);
+	uint32_t read_rssi(int device_number);
 };
 
 

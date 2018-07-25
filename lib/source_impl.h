@@ -23,6 +23,8 @@
 
 #include <limesdr/source.h>
 #include "common/device_handler.h"
+#include <sys/time.h>
+#include <fstream>
 
 namespace gr
 {
@@ -51,6 +53,9 @@ namespace gr
 	  int chip_mode;
 	  int channel;
 	} stored;
+
+	std::ofstream fp1;
+	struct timespec tnow;
 
     public:
 	source_impl(int device_number,

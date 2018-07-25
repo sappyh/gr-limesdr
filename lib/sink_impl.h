@@ -23,6 +23,8 @@
 
 #include <limesdr/sink.h>
 #include "common/device_handler.h"
+#include <sys/time.h>
+#include <fstream>
 
 namespace gr
 {
@@ -45,6 +47,12 @@ namespace gr
 	int LMS_CH_0 = 0;
 	int LMS_CH_1 = 1;
 	int sink_block = 2;
+
+	//My variables
+	bool stream=false;
+	pmt::pmt_t sob_key,eob_key,time_key;
+	std::ofstream fp1;
+	struct timespec tnow;
 
     public:
 	sink_impl(int device_number,
